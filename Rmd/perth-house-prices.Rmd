@@ -1,0 +1,158 @@
+---
+title: "Perth House Prices"
+subtitle: "Practicing Linear Regression for the Coursera Machine Learning Specialisation"
+output:
+  html_document:
+    theme:
+      bg: "#ECF0F4"
+      fg: "#202C39"
+      primary: "#FF4F5C"
+      base_font:
+        google: "Sofia Sans"
+      heading_font:
+        google: "Sofia Sans"
+      code_font:
+        google: "Roboto Mono"
+    toc: true
+    toc_float: true
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+# Knitr chunk options
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+# Introduction
+The purpose of this notebook is to explore linear regression techniques from the Coursera specialization in Machine Learning.
+
+```{r load-packages}
+# Load the required packages
+library(tidyverse)
+library(here)
+library(janitor)
+```
+
+# Load data
+The data we are using for this exploration is the [Perth House Prices](https://www.kaggle.com/datasets/syuzai/perth-house-prices) data as found on [Kaggle](https://www.kaggle.com).
+
+```{r load-data}
+# Load the data
+house_prices <- 
+  read_csv(here("data/src/all_perth_310121.csv"))
+
+# View the head
+head(house_prices)
+```
+
+# Clean data
+We will perform the following transformations to produce a clean dataset to work with for this project:
+
+- Convert column names to lowercase using the `janitor::clean_names()` function
+- Change `GARAGE`, `BUILD_YEAR` from character to numeric
+- Change `POSTCODE` from numeric to character
+- Split `DATE_SOLD` into separate columns for year and month
+- Filter records to include only house prices from a single year (to avoid too much "noise" in the pricing data due to inflation)
+
+## Clean column names
+We convert the column names to lowercase to make them easier to work with in code.
+
+```{r clean-column-names}
+house_prices_cln <- 
+  house_prices |> 
+  clean_names()
+
+names(house_prices_cln)
+```
+
+## Change data types
+We correct the data types for some of the fields. Before doing this we check the contents of each column we want to convert.
+
+### `garage`
+First we check if it is appropriate to convert this column to numeric.
+```{r check-type-garage}
+house_prices_cln |> 
+  count(garage)
+```
+
+All values are legitimate numbers or `NULL`. We can convert this column to numeric. The `NULL` values will be converted to `NA`.
+
+```{r change-type-garage}
+house_prices_cln <- 
+  house_prices_cln |> 
+  mutate(garage = as.numeric(garage))
+
+house_prices_cln |> 
+  count(garage)
+```
+
+### `build_year`
+First we check if it is appropriate to convert this column to numeric.
+
+```{r check-type-build-year}
+house_prices_cln |> 
+  count(build_year)
+```
+
+All values are legitimate numbers or `NULL`. We can convert this column to numeric. The `NULL` values will be converted to `NA`.
+
+```{r change-type-build-year}
+house_prices_cln <- 
+  house_prices_cln |> 
+  mutate(build_year = as.numeric(build_year))
+
+house_prices_cln |> 
+  count(build_year)
+```
+
+### `postcode`
+Convert from numeric to character.
+
+```{r change-type-postcode}
+house_prices_cln <- 
+  house_prices_cln |> 
+  mutate(postcode = as.character(postcode))
+```
+
+## Split data
+### `date_sold`
+In this case we need to split the `date_sold` column into separate columns for month and year. First we check if all values are in the same format (`mm_yyyy`).
+
+```{r check-type-date-sold}
+house_prices_cln |> 
+  mutate(
+    date_sold_correct_format = str_detect(
+      date_sold, "\\d{2}-\\d{4}"
+    )
+  ) |> 
+  count(date_sold_correct_format)
+```
+
+All values match the desired format so we can now separate the month and year.
+
+```{r date-sold-month-year}
+house_prices_cln <- 
+  house_prices_cln |> 
+  mutate(
+    month_sold = as.numeric(str_sub(date_sold, start = 1, end = 2)),
+    year_sold = as.numeric(str_sub(date_sold, start = -4, end = -1))
+  )
+
+house_prices_cln |> 
+  count(year_sold)
+```
+
+## Filter records
+Based on the counts above, we have records for house sales from 1988 to 2020. Let's filter the data to include only 2020 sales.
+
+```{r filter-data}
+house_prices_2020 <- 
+  house_prices_cln |> 
+  filter(year_sold == 2020)
+```
+
