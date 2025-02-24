@@ -16,6 +16,7 @@ output:
     toc: true
     toc_float: true
     toc_depth: 2
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -29,7 +30,10 @@ knitr::opts_chunk$set(
 ```
 
 # Introduction
+
 The purpose of this notebook is to explore linear regression techniques from the Coursera specialization in Machine Learning.
+
+First, we load the required packages.
 
 ```{r load-packages}
 # Load the required packages
@@ -39,6 +43,7 @@ library(janitor)
 ```
 
 # Load data
+
 The data we are using for this exploration is the [Perth House Prices](https://www.kaggle.com/datasets/syuzai/perth-house-prices) data as found on [Kaggle](https://www.kaggle.com).
 
 ```{r load-data}
@@ -51,15 +56,17 @@ head(house_prices)
 ```
 
 # Clean data
+
 We will perform the following transformations to produce a clean dataset to work with for this project:
 
-- Convert column names to lowercase using the `janitor::clean_names()` function
-- Change `GARAGE`, `BUILD_YEAR` from character to numeric
-- Change `POSTCODE` from numeric to character
-- Split `DATE_SOLD` into separate columns for year and month
-- Filter records to include only house prices from a single year (to avoid too much "noise" in the pricing data due to inflation)
+-   Convert column names to lowercase using the `janitor::clean_names()` function
+-   Change `GARAGE`, `BUILD_YEAR` from character to numeric
+-   Change `POSTCODE` from numeric to character
+-   Split `DATE_SOLD` into separate columns for year and month
+-   Filter records to include only house prices from a single year (to avoid too much "noise" in the pricing data due to inflation)
 
 ## Clean column names
+
 We convert the column names to lowercase to make them easier to work with in code.
 
 ```{r clean-column-names}
@@ -71,10 +78,13 @@ names(house_prices_cln)
 ```
 
 ## Change data types
+
 We correct the data types for some of the fields. Before doing this we check the contents of each column we want to convert.
 
 ### `garage`
+
 First we check if it is appropriate to convert this column to numeric.
+
 ```{r check-type-garage}
 house_prices_cln |> 
   count(garage)
@@ -92,6 +102,7 @@ house_prices_cln |>
 ```
 
 ### `build_year`
+
 First we check if it is appropriate to convert this column to numeric.
 
 ```{r check-type-build-year}
@@ -111,6 +122,7 @@ house_prices_cln |>
 ```
 
 ### `postcode`
+
 Convert from numeric to character.
 
 ```{r change-type-postcode}
@@ -120,7 +132,9 @@ house_prices_cln <-
 ```
 
 ## Split data
+
 ### `date_sold`
+
 In this case we need to split the `date_sold` column into separate columns for month and year. First we check if all values are in the same format (`mm_yyyy`).
 
 ```{r check-type-date-sold}
@@ -148,11 +162,149 @@ house_prices_cln |>
 ```
 
 ## Filter records
-Based on the counts above, we have records for house sales from 1988 to 2020. Let's filter the data to include only 2020 sales.
+
+Based on the counts above, we have records for house sales from 1988 to 2020. Let's filter the data to include only 2020 sales. We can also reduce the number of columns to include only `floor_area` and `price`.
 
 ```{r filter-data}
 house_prices_2020 <- 
   house_prices_cln |> 
-  filter(year_sold == 2020)
+  filter(year_sold == 2020) |> 
+  select(floor_area, price)
+```
+
+# Plot the data
+
+Let's create a scatter plot showing the relationship between house prices and house size. For house prices we'll use the `price` column and for house size we'll use `floor_area`. We will also fit a linear regression model to the chart.
+
+```{r scatter-plot-size}
+# Plot the house prices and house size
+scatter_price_size <-
+  house_prices_2020 |>
+    ggplot(
+      aes(x = floor_area, y = price)
+    ) +
+    geom_point() +
+    geom_smooth(method = "lm") # adds a linear regression line
+
+scatter_price_size
+```
+
+# Fit a linear regression model
+
+For this exercise we use the simple dataset `house_prices_2020` as our *training set*. We can rename the variables as `x_train` for the feature variable and `y_train` for the output variable.
+
+```{r training-set-head}
+house_prices_2020_lm <- 
+  house_prices_2020 |> 
+  rename(x_train = floor_area, y_train = price)
+
+head(house_prices_2020_lm)
+```
+
+We can also store `x_train` and `y_train` in separate vectors.
+
+```{r store-as-vector}
+x_train <- house_prices_2020_lm$x_train
+y_train <- house_prices_2020_lm$y_train
+```
+
+## Number of training examples $m$
+
+We use $m$ to denote the number of training examples.
+
+```{r training-examples}
+m <- length(x_train)
+
+paste0("Number of training examples is: ", m)
+```
+
+## Model function
+
+The model function for linear regression is represented as $f(x)=wx+b$
+
+Different values of $w$ and $b$ give you different straight lines on the plot. Let's try to get a better intuition for this by starting with $w=100$ and $b=100$.
+
+```{r set-w-and-b}
+w <- 100
+b <- 100
+
+paste0("w: ", w)
+paste0("b: ", b)
+```
+
+Now, let's compute the value of $f_{w,b}(x^{(i)})$ for your data points. You can explicitly write this out for each data point as -
+
+for $x^{(1)}$, `f_wb = w * x[1] + b`
+
+for $x^{(2)}$, `f_wb = w * x[2] + b`
+
+and so on.
+
+For a large number of data points, this can get unwieldy and repetitive. So instead, you can calculate the output in a `compute_model_output` function.
+
+```{r compute-model-output}
+compute_model_output <- function(df, w, b) {
+  # Computes the prediction of a linear model
+  #  Args:
+  #    x (ndarray (m,)): Data, m examples 
+  #    w,b (scalar)    : model parameters  
+  #  Returns
+  #    f_wb (ndarray (m,)): model prediction
+  df <- 
+    df |> 
+    mutate(f_wb = w * x_train + b)
+  
+  return(df)
+}
+```
+
+Now let's call the `compute_model_output` function and plot the output.
+
+```{r apply-compute-model-output}
+predictions <- 
+  compute_model_output(house_prices_2020_lm, w, b)
+
+predictions |> 
+  ggplot() +
+  geom_point(
+    aes(x = x_train, y = y_train, colour = "Actual values")
+  ) +
+  geom_smooth(
+    aes(x = x_train, y = f_wb, colour = "Our prediction"),
+    method = "lm"
+  ) +
+  xlab("Size (m2)") +
+  ylab("Price (AUD)")
+```
+
+As you can see, setting $w=100$ and $b=100$ does not result in a line that fits our data. Use the chunk below to try different values for $b$ and $w$.
+
+```{r different-values-for-w-and-b}
+w <- 3500
+b <- 0
+
+predictions <- 
+  compute_model_output(house_prices_2020_lm, w, b)
+
+predictions |> 
+  ggplot() +
+  geom_point(
+    aes(x = x_train, y = y_train, colour = "Actual values")
+  ) +
+  geom_smooth(
+    aes(x = x_train, y = f_wb, colour = "Our prediction"),
+    method = "lm"
+  ) +
+  xlab("Size (m2)") +
+  ylab("Price (AUD)")
+```
+
+Now we can use this function to make a prediction of the price of a house that is 300m^2^.
+
+```{r prediction}
+x_i <- 300
+cost_300sqm <- w * x_i + b
+
+paste0(cost_300sqm, " dollars")
 ```
 
