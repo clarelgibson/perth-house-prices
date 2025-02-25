@@ -1,0 +1,87 @@
+---
+title: "Perth House Prices"
+subtitle: "Practicing Multiple Linear Regression for the Coursera Machine Learning Specialisation"
+output:
+  html_document:
+    theme:
+      bg: "#ECF0F4"
+      fg: "#202C39"
+      primary: "#FF4F5C"
+      base_font:
+        google: "Sofia Sans"
+      heading_font:
+        google: "Sofia Sans"
+      code_font:
+        google: "Roboto Mono"
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+# Knitr chunk options
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+Notebook prepared by [Clare Gibson](https://www.datatranslator.co.uk).
+
+# Introduction
+
+## Goals
+In this notebook I will:
+
+- practise optimizing $\vec{w}$ and $b$ using gradient descent
+- practise what I have learned in weeks 1 and 2 of the [Stanford Machine Learning specialization](https://www.coursera.org/specializations/machine-learning-introduction?utm_medium=sem&utm_source=gg&utm_campaign=b2c_emea_x_multi_ftcof_career-academy_cx_dr_bau_gg_pmax_gc_s1_en_m_hyb_23-12_x&campaignid=20858198824&adgroupid=&device=c&keyword=&matchtype=&network=x&devicemodel=&creativeid=&assetgroupid=6490027433&targetid=&extensionid=&placement=&gad_source=1&gbraid=0AAAAADdKX6YAM0bxZ5FcdHU9SI3k0eeUu&gclid=CjwKCAiAiOa9BhBqEiwABCdG8xkDREktjtyaZgZG8005O_KWaT41YjYn2RSJAvqmzF1d84YTLnaA1BoCMpsQAvD_BwE)
+- practise using R to implement a multiple linear regression model
+
+## Tools
+In this notebook I use the following tools:
+
+- `here` for file location
+- `tidyverse` for data wrangling
+- `ggplot2` for plotting
+
+```{r load-packages}
+# Load packages
+library(here)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Data
+In this notebook I use the [Kaggle Perth House Prices](https://www.kaggle.com/datasets/syuzai/perth-house-prices) dataset. The chunk below calls a script that loads the data into R and prepares it for the linear regression exercise.
+
+```{r load-data}
+# Load data
+source(here("R/utils.R"))
+
+# Store data in variable df
+df <- model_1
+
+# Show the head
+head(df)
+```
+
+# Problem statement
+In this exercise I am working on predicting house prices using various features. The training dataset contains `r nrow(df)` examples with three features (size, bedrooms and age). I will build a linear regression model using these values so that I can predict the price for other houses.
+
+The code chunk below creates the `x_train` and `y_train` variables.
+
+```{r create-variables}
+# Create x_train and y_train
+x_train <- as.matrix(df[,-1])
+y_train <- as.matrix(df[,1])
+```
+
+The example data is now stored in matrix `x_train`. Each row of the matrix represents one training example. When you have $m$ training examples and $n$ features, `x_train` is a matrix with dimensions $(m,n)$. In this example the matrix has dimensions `r dim(x_train)`.
+
+```{r view-dimensions}
+dim(x_train)
+```
+
