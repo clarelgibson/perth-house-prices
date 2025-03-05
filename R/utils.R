@@ -54,6 +54,6 @@ model_1 <-
   # doesn't make sense)
   filter(age >= 0) |> 
   # discard NA values
-  na.omit()
-
-write_csv(model_1, here("data/cln/model_1.csv"))
+  na.omit() |> 
+  # choose 10 examples for the exercise
+  slice_sample(n = 10)

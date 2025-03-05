@@ -68,9 +68,24 @@ df <- model_1
 head(df)
 ```
 
+```{r load-alternative-data, eval=FALSE, include=FALSE}
+# This data is the example used in the lab
+df <- tibble(
+  price = c(460, 232, 178),
+  size = c(2104, 1416, 852),
+  bedrooms = c(5, 3, 2),
+  floors = c(1, 2, 1),
+  age = c(45, 40, 35)
+)
+
+head(df)
+```
+
+
 # Problem statement
 In this exercise I am working on predicting house prices using various features. The training dataset contains `r nrow(df)` examples with three features (size, bedrooms and age). I will build a linear regression model using these values so that I can predict the price for other houses.
 
+## Setting the variables
 The code chunk below creates the `x_train` and `y_train` variables.
 
 ```{r create-variables}
@@ -79,9 +94,202 @@ x_train <- as.matrix(df[,-1])
 y_train <- as.matrix(df[,1])
 ```
 
-The example data is now stored in matrix `x_train`. Each row of the matrix represents one training example. When you have $m$ training examples and $n$ features, `x_train` is a matrix with dimensions $(m,n)$. In this example the matrix has dimensions `r dim(x_train)`.
+The example data is now stored in matrix `x_train`. Each row of the matrix represents one training example. When you have $m$ training examples and $n$ features, `x_train` is a matrix with dimensions $(m,n)$. In this example the `x_train` matrix has dimensions `r dim(x_train)`. The `y_train` matrix has dimensions `r dim(y_train)`.
 
 ```{r view-dimensions}
 dim(x_train)
+dim(y_train)
+```
+
+$\mathbf{w}$ is a vector with $n$ elements.
+
+- Each element contains the parameter associated with one feature.
+- in our dataset, n is 4.
+- notionally, we draw this as a column vector
+
+$$
+\mathbf{w} = \begin{pmatrix}
+w_0 \\ 
+w_1 \\
+\cdots\\
+w_{n-1}
+\end{pmatrix}
+$$
+
+$b$ is a scalar parameter.
+
+For demonstration, $w$ and $b$ will be loaded with some initial selected values that are near the optimal.
+
+```{r initialize-w-and-b}
+# Initialise values for w and b
+b_init <- 785.1811367994083
+w_init <- c(0.39133535, 18.75376741, -26.42131618)
+#w_init <-  c(0.39133535, 18.75376741, -53.36032453, -26.42131618)
+
+b_init
+w_init
+```
+
+# Predictions
+## Using a for loop
+One method to obtain a prediction is to loop over each feature, multiplying $w$ and $x$ together and then adding $b$ at the end.
+
+```{r func-to-predict-with-for-loop}
+# Predicting with for loop
+predict_single_loop <- function(x, w, b) {
+  n <- dim(x_train)[2]
+  p <- 0
+  
+  for (i in 1:n) {
+    p_i <- x[i] * w[i]
+    p <- p + p_i
+  }
+  p <- p + b
+  return(p)
+}
+```
+
+I can use this function to obtain a prediction.
+```{r predict-with-for-loop}
+# Get a row from the training data
+x_vec <- x_train[1,]
+x_vec
+
+# Make a prediction
+f_wb <- predict_single_loop(x_vec, w_init, b_init)
+paste0("Prediction: ", f_wb)
+```
+
+## Using vectorisation
+An alternative mthod to obtain a prediction is to use vector operations by finding the dot product of $\vec{w}$ and $\vec{x}$.
+
+```{r func-to-predict-with-vectorisation}
+# Predicting with vectorisation
+predict <- function(x, w, b) {
+  p <- sum(x*w) + b
+  return(p)
+}
+```
+
+I can use this function to obtain a prediction.
+```{r predict-with-vectorisation}
+# Make a prediction
+f_wb <- predict(x_vec, w_init, b_init)
+paste0("Prediction: ", f_wb)
+```
+
+# Compute cost
+The equation for the cost function with multiple variables $J(\mathbf{w},b)$ is:
+
+$$
+J(\mathbf{w},b) = \frac{1}{2m} \sum\limits_{i = 0}^{m-1} (f_{\mathbf{w},b}(\mathbf{x}^{(i)}) - y^{(i)})^2
+$$ 
+
+where:
+$$
+f_{\mathbf{w},b}(\mathbf{x}^{(i)}) = \mathbf{w} \cdot \mathbf{x}^{(i)} + b
+$$ 
+```{r func-to-compute-cost}
+# Function to compute cost
+compute_cost <- function(x, y, w, b) {
+  m <- dim(x_train)[1]
+  cost <- 0.0
+  
+  for (i in 1:m) {
+    f_wb_i <- sum(x[i,] * w) + b
+    cost <- cost + (f_wb_i - y[i]) ^ 2
+  }
+  cost <- cost / (2 * m)
+  return(cost)
+}
+```
+
+```{r compute-cost}
+# Compute and display cost using our pre-chosen optimal parameters.
+cost <- compute_cost(x_train, y_train, w_init, b_init)
+paste0("Cost at optimal w: ", cost)
+```
+
+# Gradient descent
+## Compute gradient
+I will define a function to compute the gradients needed for gradient descent.
+
+```{r func-to-compute-gradient}
+# Compute the gradients
+compute_gradient <- function(x, y, w, b) {
+  m <- dim(x)[1]
+  n <- dim(x)[2]
+  dj_dw <- matrix(0,,n)
+  dj_db <- 0.0
+  
+  for (i in 1:m) {
+    err <- (sum(x[i,] * w) + b) - y[i,]
+    for (j in 1:n) {
+      dj_dw[j] <- dj_dw[j] + err * x[i, j]
+    }
+    dj_db <- dj_db + err
+  }
+  dj_dw <- dj_dw / m
+  dj_db <- dj_db / m
+  
+  return(list(dj_db = dj_db, dj_dw = dj_dw))
+}
+
+# Compute and display gradient
+tmp_grads <- compute_gradient(x_train, y_train, w_init, b_init)
+tmp_grads
+```
+
+## Run gradient descent
+I will write a function to perform the gradient descent algorithm to convergence.
+
+```{r func-to-perform-gradient-descent}
+# Gradient descent
+gradient_descent <- function(x, y, w_in, b_in, gradient_function, alpha, num_iters) {
+  w <- w_in
+  b <- b_in
+  
+  for (i in 1:num_iters) {
+    grads <- gradient_function(x, y, w, b)
+    
+    w <- w - alpha * grads$dj_dw
+    b <- b - alpha * grads$dj_db
+  }
+  return(list(w = w, b = b))
+}
+```
+
+In the next code chunk I will run the gradient descent function.
+
+```{r run-gradient-descent}
+# Initialise parameters
+#initial_w <- c(0.0, 0.0, 0.0, 0.0)
+initial_w <- c(0.0, 0.0, 0.0)
+initial_b <- 0.0
+
+# Gradient descent settings
+iterations <- 1000
+alpha <- 5.0e-7
+
+# Run gradient descent
+wb <- gradient_descent(
+  x_train,
+  y_train,
+  initial_w,
+  initial_b,
+  compute_gradient,
+  alpha,
+  iterations
+)
+
+paste0("b found by gradient descent: ", round(wb$b,2))
+paste0("w found by gradient descent: ", round(wb$w,2))
+
+w <- wb$w
+b <- wb$b
+m = min(5, dim(x_train)[1])
+for (i in 1:m) {
+  print(paste0("Prediction: ", round(sum(x_train[i,] * w) + b, 2), " Target: ", y_train[i]))
+}
 ```
 

@@ -3265,21 +3265,23 @@ head(df)</code></pre>
 <pre><code>## # A tibble: 6 × 4
 ##   price  size bedrooms   age
 ##   &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt;
-## 1   565   160        4    15
-## 2   365   139        3     6
-## 3   287    86        3    36
-## 4   255    59        2    65
-## 5   325   131        4    18
-## 6   409   118        4    22</code></pre>
+## 1   490   172        3     7
+## 2   220   173        3    20
+## 3   490   159        4     5
+## 4   416   159        3    15
+## 5   680   141        3    10
+## 6   635   261        4     4</code></pre>
 </div>
 </div>
 <div id="problem-statement" class="section level1">
 <h1>Problem statement</h1>
 <p>In this exercise I am working on predicting house prices using
-various features. The training dataset contains 29938 examples with
-three features (size, bedrooms and age). I will build a linear
-regression model using these values so that I can predict the price for
-other houses.</p>
+various features. The training dataset contains 10 examples with three
+features (size, bedrooms and age). I will build a linear regression
+model using these values so that I can predict the price for other
+houses.</p>
+<div id="setting-the-variables" class="section level2">
+<h2>Setting the variables</h2>
 <p>The code chunk below creates the <code>x_train</code> and
 <code>y_train</code> variables.</p>
 <pre class="r"><code># Create x_train and y_train
@@ -3288,9 +3290,207 @@ y_train &lt;- as.matrix(df[,1])</code></pre>
 <p>The example data is now stored in matrix <code>x_train</code>. Each
 row of the matrix represents one training example. When you have <span class="math inline">\(m\)</span> training examples and <span class="math inline">\(n\)</span> features, <code>x_train</code> is a
 matrix with dimensions <span class="math inline">\((m,n)\)</span>. In
-this example the matrix has dimensions 29938, 3.</p>
+this example the <code>x_train</code> matrix has dimensions 10, 3. The
+<code>y_train</code> matrix has dimensions 10, 1.</p>
 <pre class="r"><code>dim(x_train)</code></pre>
-<pre><code>## [1] 29938     3</code></pre>
+<pre><code>## [1] 10  3</code></pre>
+<pre class="r"><code>dim(y_train)</code></pre>
+<pre><code>## [1] 10  1</code></pre>
+<p><span class="math inline">\(\mathbf{w}\)</span> is a vector with
+<span class="math inline">\(n\)</span> elements.</p>
+<ul>
+<li>Each element contains the parameter associated with one
+feature.</li>
+<li>in our dataset, n is 4.</li>
+<li>notionally, we draw this as a column vector</li>
+</ul>
+<p><span class="math display">\[
+\mathbf{w} = \begin{pmatrix}
+w_0 \\
+w_1 \\
+\cdots\\
+w_{n-1}
+\end{pmatrix}
+\]</span></p>
+<p><span class="math inline">\(b\)</span> is a scalar parameter.</p>
+<p>For demonstration, <span class="math inline">\(w\)</span> and <span class="math inline">\(b\)</span> will be loaded with some initial
+selected values that are near the optimal.</p>
+<pre class="r"><code># Initialise values for w and b
+b_init &lt;- 785.1811367994083
+w_init &lt;- c(0.39133535, 18.75376741, -26.42131618)
+#w_init &lt;-  c(0.39133535, 18.75376741, -53.36032453, -26.42131618)
+
+b_init</code></pre>
+<pre><code>## [1] 785.1811</code></pre>
+<pre class="r"><code>w_init</code></pre>
+<pre><code>## [1]   0.3913354  18.7537674 -26.4213162</code></pre>
+</div>
+</div>
+<div id="predictions" class="section level1">
+<h1>Predictions</h1>
+<div id="using-a-for-loop" class="section level2">
+<h2>Using a for loop</h2>
+<p>One method to obtain a prediction is to loop over each feature,
+multiplying <span class="math inline">\(w\)</span> and <span class="math inline">\(x\)</span> together and then adding <span class="math inline">\(b\)</span> at the end.</p>
+<pre class="r"><code># Predicting with for loop
+predict_single_loop &lt;- function(x, w, b) {
+  n &lt;- dim(x_train)[2]
+  p &lt;- 0
+  
+  for (i in 1:n) {
+    p_i &lt;- x[i] * w[i]
+    p &lt;- p + p_i
+  }
+  p &lt;- p + b
+  return(p)
+}</code></pre>
+<p>I can use this function to obtain a prediction.</p>
+<pre class="r"><code># Get a row from the training data
+x_vec &lt;- x_train[1,]
+x_vec</code></pre>
+<pre><code>##     size bedrooms      age 
+##      172        3        7</code></pre>
+<pre class="r"><code># Make a prediction
+f_wb &lt;- predict_single_loop(x_vec, w_init, b_init)
+paste0(&quot;Prediction: &quot;, f_wb)</code></pre>
+<pre><code>## [1] &quot;Prediction: 723.802905969408&quot;</code></pre>
+</div>
+<div id="using-vectorisation" class="section level2">
+<h2>Using vectorisation</h2>
+<p>An alternative mthod to obtain a prediction is to use vector
+operations by finding the dot product of <span class="math inline">\(\vec{w}\)</span> and <span class="math inline">\(\vec{x}\)</span>.</p>
+<pre class="r"><code># Predicting with vectorisation
+predict &lt;- function(x, w, b) {
+  p &lt;- sum(x*w) + b
+  return(p)
+}</code></pre>
+<p>I can use this function to obtain a prediction.</p>
+<pre class="r"><code># Make a prediction
+f_wb &lt;- predict(x_vec, w_init, b_init)
+paste0(&quot;Prediction: &quot;, f_wb)</code></pre>
+<pre><code>## [1] &quot;Prediction: 723.802905969408&quot;</code></pre>
+</div>
+</div>
+<div id="compute-cost" class="section level1">
+<h1>Compute cost</h1>
+<p>The equation for the cost function with multiple variables <span class="math inline">\(J(\mathbf{w},b)\)</span> is:</p>
+<p><span class="math display">\[
+J(\mathbf{w},b) = \frac{1}{2m} \sum\limits_{i = 0}^{m-1}
+(f_{\mathbf{w},b}(\mathbf{x}^{(i)}) - y^{(i)})^2
+\]</span></p>
+<p>where: <span class="math display">\[
+f_{\mathbf{w},b}(\mathbf{x}^{(i)}) = \mathbf{w} \cdot \mathbf{x}^{(i)} +
+b
+\]</span></p>
+<pre class="r"><code># Function to compute cost
+compute_cost &lt;- function(x, y, w, b) {
+  m &lt;- dim(x_train)[1]
+  cost &lt;- 0.0
+  
+  for (i in 1:m) {
+    f_wb_i &lt;- sum(x[i,] * w) + b
+    cost &lt;- cost + (f_wb_i - y[i]) ^ 2
+  }
+  cost &lt;- cost / (2 * m)
+  return(cost)
+}</code></pre>
+<pre class="r"><code># Compute and display cost using our pre-chosen optimal parameters.
+cost &lt;- compute_cost(x_train, y_train, w_init, b_init)
+paste0(&quot;Cost at optimal w: &quot;, cost)</code></pre>
+<pre><code>## [1] &quot;Cost at optimal w: 29461.0964429751&quot;</code></pre>
+</div>
+<div id="gradient-descent" class="section level1">
+<h1>Gradient descent</h1>
+<div id="compute-gradient" class="section level2">
+<h2>Compute gradient</h2>
+<p>I will define a function to compute the gradients needed for gradient
+descent.</p>
+<pre class="r"><code># Compute the gradients
+compute_gradient &lt;- function(x, y, w, b) {
+  m &lt;- dim(x)[1]
+  n &lt;- dim(x)[2]
+  dj_dw &lt;- matrix(0,,n)
+  dj_db &lt;- 0.0
+  
+  for (i in 1:m) {
+    err &lt;- (sum(x[i,] * w) + b) - y[i,]
+    for (j in 1:n) {
+      dj_dw[j] &lt;- dj_dw[j] + err * x[i, j]
+    }
+    dj_db &lt;- dj_db + err
+  }
+  dj_dw &lt;- dj_dw / m
+  dj_db &lt;- dj_db / m
+  
+  return(list(dj_db = dj_db, dj_dw = dj_dw))
+}
+
+# Compute and display gradient
+tmp_grads &lt;- compute_gradient(x_train, y_train, w_init, b_init)
+tmp_grads</code></pre>
+<pre><code>## $dj_db
+##    price 
+## 37.22044 
+## 
+## $dj_dw
+##          [,1]     [,2]     [,3]
+## [1,] 7595.576 160.6688 -1546.83</code></pre>
+</div>
+<div id="run-gradient-descent" class="section level2">
+<h2>Run gradient descent</h2>
+<p>I will write a function to perform the gradient descent algorithm to
+convergence.</p>
+<pre class="r"><code># Gradient descent
+gradient_descent &lt;- function(x, y, w_in, b_in, gradient_function, alpha, num_iters) {
+  w &lt;- w_in
+  b &lt;- b_in
+  
+  for (i in 1:num_iters) {
+    grads &lt;- gradient_function(x, y, w, b)
+    
+    w &lt;- w - alpha * grads$dj_dw
+    b &lt;- b - alpha * grads$dj_db
+  }
+  return(list(w = w, b = b))
+}</code></pre>
+<p>In the next code chunk I will run the gradient descent function.</p>
+<pre class="r"><code># Initialise parameters
+#initial_w &lt;- c(0.0, 0.0, 0.0, 0.0)
+initial_w &lt;- c(0.0, 0.0, 0.0)
+initial_b &lt;- 0.0
+
+# Gradient descent settings
+iterations &lt;- 1000
+alpha &lt;- 5.0e-7
+
+# Run gradient descent
+wb &lt;- gradient_descent(
+  x_train,
+  y_train,
+  initial_w,
+  initial_b,
+  compute_gradient,
+  alpha,
+  iterations
+)
+
+paste0(&quot;b found by gradient descent: &quot;, round(wb$b,2))</code></pre>
+<pre><code>## [1] &quot;b found by gradient descent: 0.02&quot;</code></pre>
+<pre class="r"><code>paste0(&quot;w found by gradient descent: &quot;, round(wb$w,2))</code></pre>
+<pre><code>## [1] &quot;w found by gradient descent: 2.69&quot; &quot;w found by gradient descent: 0.06&quot;
+## [3] &quot;w found by gradient descent: 0.03&quot;</code></pre>
+<pre class="r"><code>w &lt;- wb$w
+b &lt;- wb$b
+m = min(5, dim(x_train)[1])
+for (i in 1:m) {
+  print(paste0(&quot;Prediction: &quot;, round(sum(x_train[i,] * w) + b, 2), &quot; Target: &quot;, y_train[i]))
+}</code></pre>
+<pre><code>## [1] &quot;Prediction: 463.77 Target: 490&quot;
+## [1] &quot;Prediction: 466.83 Target: 220&quot;
+## [1] &quot;Prediction: 428.74 Target: 490&quot;
+## [1] &quot;Prediction: 428.97 Target: 416&quot;
+## [1] &quot;Prediction: 380.33 Target: 680&quot;</code></pre>
+</div>
 </div>
 
 
