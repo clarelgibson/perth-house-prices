@@ -6,7 +6,7 @@ I am using the Perth house prices dataset to practice and understand the concept
 
 ## Getting started
 ### Data
-- [Perth House Prices](https://www.kaggle.com/datasets/syuzai/perth-house-prices)
+- [Perth House Prices](https://www.kaggle.com/datasets/syuzai/perth-house-prices). Save as `data/src/all_perth_310121.csv`.
 
 ### Packages
 This project uses `renv` for package management. To set up the packages needed for this project run the following code in the console:
